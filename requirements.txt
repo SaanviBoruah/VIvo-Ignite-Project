@@ -6,3 +6,5 @@ streamlit-audiorec
 tensorflow
 keras
 tf-keras
+torch
+pytorch
