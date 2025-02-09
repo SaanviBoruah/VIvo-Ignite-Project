@@ -5,3 +5,4 @@ transformers
 streamlit-audiorec
 tensorflow
 keras
+tf-keras
