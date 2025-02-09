@@ -3,3 +3,4 @@ numpy
 librosa
 transformers
 streamlit-audiorec
+tensorflow
