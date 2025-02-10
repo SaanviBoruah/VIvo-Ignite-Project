@@ -1,9 +1,10 @@
 import streamlit as st
 import numpy as np
 import librosa
-from transformers import pipeline
 import psychometric_tests
 from st_audiorec import st_audiorec
+from textblob import TextBlob  # Import TextBlob
+import nltk
 
 # Configure page
 st.set_page_config(
@@ -12,20 +13,26 @@ st.set_page_config(
     layout="wide"
 )
 
+# Download NLTK resources (only runs once per session)
+@st.cache_resource
+def download_nltk_resources():
+    try:
+        nltk.data.find('vader_lexicon/vader_lexicon.zip')
+    except LookupError:
+        nltk.download('vader_lexicon') # Download the resource
 
+download_nltk_resources()
 
 # Initialize models (cached for performance)
+# No more Hugging Face model
 @st.cache_resource
 def load_models():
-    return {
-        "text_analyzer": pipeline("text-classification", model="michellejieli/emotion_text_classifier"),
-        "sentiment_analyzer": pipeline("sentiment-analysis")
-    }
+    return {}  # No Hugging Face model
 
-models = load_models()
+models = load_models() 
 
-with open( "style.css" ) as css:
-    st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+with open("style.css") as css:
+    st.markdown(f'<style>{css.read()}</style>', unsafe_allow_html=True)
 
 
 # Color-Mood Mapping
@@ -52,10 +59,12 @@ COLOR_MOOD_MAP = {
     'beige': 'Comfortable/Relaxed'
 }
 
+
 # Function to convert hex to RGB
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
 
 # Function to find the nearest color
 def find_nearest_color(selected_hex, simple_colors):
@@ -72,24 +81,25 @@ def find_nearest_color(selected_hex, simple_colors):
 
     return nearest_color
 
+
 def analyze_voice(audio_file):
     y, sr = librosa.load(audio_file, sr=None)
-    
+
     # Extract pitch using YIN algorithm
     pitch = librosa.yin(y, fmin=50, fmax=2000)
     pitch = pitch[pitch > 0]  # Remove unvoiced frames
-    
+
     if len(pitch) == 0:
         return "No speech detected in audio"
-    
+
     # Calculate pitch characteristics
     mean_pitch = np.mean(pitch)
     pitch_std = np.std(pitch)
     voiced_frames_ratio = len(pitch) / len(y) * 100  # Percentage of voiced speech
-    
+
     # Emotional state interpretation based on pitch characteristics
     interpretation = []
-    
+
     # Pitch height analysis
     if mean_pitch < 85:
         interpretation.append("low pitch (possibly indicating sadness, fatigue, or depression)")
@@ -101,7 +111,7 @@ def analyze_voice(audio_file):
         interpretation.append("high pitch (may suggest excitement or anxiety)")
     else:
         interpretation.append("very high pitch (could indicate strong emotions)")
-    
+
     # Pitch variability analysis
     if pitch_std < 15:
         interpretation.append("monotonous speech (possibly indicating depression or fatigue)")
@@ -109,7 +119,7 @@ def analyze_voice(audio_file):
         interpretation.append("normal pitch variation")
     else:
         interpretation.append("high pitch variability (may suggest emotional stress or excitement)")
-    
+
     # Voiced speech analysis
     if voiced_frames_ratio < 60:
         interpretation.append("frequent pauses (could indicate anxiety or cognitive load)")
@@ -117,7 +127,7 @@ def analyze_voice(audio_file):
         interpretation.append("normal speech flow")
     else:
         interpretation.append("rapid speech (may suggest excitement or stress)")
-    
+
     # Create final report
     analysis = {
         "mean_pitch_hz": round(float(mean_pitch), 1),
@@ -125,8 +135,9 @@ def analyze_voice(audio_file):
         "voiced_speech_percent": round(voiced_frames_ratio, 1),
         "interpretation": interpretation
     }
-    
+
     return analysis
+
 
 # Main app
 def main():
@@ -139,7 +150,6 @@ def main():
 
     st.title("Multi-Modal Emotional Wellbeing Analysis Suite 🧠")
 
-
     # Privacy notice
     st.markdown("""
     <div style="background:#EAEAED; padding:10px; border-radius:10px; margin-bottom:20px">
@@ -147,26 +157,23 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-
     # Section 1: Color Picker
     st.subheader("Color Mood Test")
     st.markdown("""
     <div style="background:#55e4c530; color:#2f7163; text-align: center; padding:10px; border-radius:0px 0px 10px 10px; margin-bottom:20px">
-    Emotion and sentiment representation based on color-mood associations. Color-emotion associations vary by culture and individual. 
+    Emotion and sentiment representation based on color-mood associations. Color-emotion associations vary by culture and individual.
     </div>
     """, unsafe_allow_html=True)
     color = st.color_picker("Select a color representing your mood", "#0000ff")
-
 
     # Section 2: Text Analysis
     st.subheader("Text Analysis")
     st.markdown("""
     <div style="background:#55e4c530; color:#2f7163; text-align: center; padding:10px; border-radius:0px 0px 10px 10px; margin-bottom:20px">
-    Ideal for analyzing the sentiment of the user's journal or free-form text input. Emotion analysis from text are based on 6 Ekman emotions. 
+    Ideal for analyzing the sentiment of the user's journal or free-form text input. Emotion analysis from text are based on 6 Ekman emotions.
     </div>
     """, unsafe_allow_html=True)
     journal_text = st.text_area("Write about how you are feeling", height=100)
-
 
     # Section 3: Emotion Assessment
     st.subheader("Emotion Assessment")
@@ -180,18 +187,17 @@ def main():
     with st.container(border=True, height=400):
         # Display the selected test
         test_data = psychometric_tests.TESTS[selected_test]
-        #st.write(f"{selected_test}")
+        # st.write(f"{selected_test}")
 
         # Collect user responses
         responses = []
         for i, question in enumerate(test_data["questions"]):
             response = st.radio(
-                f"{i+1}. {question}",
+                f"{i + 1}. {question}",
                 options=test_data["options"],
                 key=f"q{i}"
             )
             responses.append(test_data["scoring"][test_data["options"].index(response)])
-
 
     # Section 4: Voice Analysis
     st.subheader("Voice Analysis")
@@ -205,7 +211,6 @@ def main():
 
     if wav_audio_data is not None:
         st.audio(wav_audio_data, format='audio/wav')
-
 
     button1, button2 = st.columns(2)
 
@@ -250,7 +255,7 @@ def main():
         button1.write(f"**{actions} tests validated**")
 
     # Submit button
-    if button2.button("**Analyze Mental State**",  type = "primary"): #disabled = not valid,
+    if button2.button("**Analyze Mental State**", type="primary", disabled = not valid):  # disabled = not valid,
         st.subheader("Emotion Analysis Results")
         # Disclaimer
         st.markdown("""
@@ -263,26 +268,26 @@ def main():
         # 1. Color Analysis
         color_hex = color.lstrip("#").lower()
         simple_colors = {
-            "ff0000": "red",        # Red
-            "0000ff": "blue",       # Blue
-            "00ff00": "green",      # Green
-            "ffff00": "yellow",     # Yellow
-            "ffa500": "orange",     # Orange
-            "800080": "purple",     # Purple
-            "ffc0cb": "pink",       # Pink
-            "a52a2a": "brown",      # Brown
-            "000000": "black",      # Black
-            "ffffff": "white",      # White
-            "808080": "gray",       # Gray
-            "008080": "teal",       # Teal
-            "ff00ff": "magenta",    # Magenta
-            "e6e6fa": "lavender",   # Lavender
-            "ffd700": "gold",       # Gold
-            "c0c0c0": "silver",     # Silver
+            "ff0000": "red",  # Red
+            "0000ff": "blue",  # Blue
+            "00ff00": "green",  # Green
+            "ffff00": "yellow",  # Yellow
+            "ffa500": "orange",  # Orange
+            "800080": "purple",  # Purple
+            "ffc0cb": "pink",  # Pink
+            "a52a2a": "brown",  # Brown
+            "000000": "black",  # Black
+            "ffffff": "white",  # White
+            "808080": "gray",  # Gray
+            "008080": "teal",  # Teal
+            "ff00ff": "magenta",  # Magenta
+            "e6e6fa": "lavender",  # Lavender
+            "ffd700": "gold",  # Gold
+            "c0c0c0": "silver",  # Silver
             "40e0d0": "turquoise",  # Turquoise
-            "800000": "maroon",     # Maroon
-            "000080": "navy",       # Navy
-            "f5f5dc": "beige"       # Beige
+            "800000": "maroon",  # Maroon
+            "000080": "navy",  # Navy
+            "f5f5dc": "beige"  # Beige
         }
         nearest_color = find_nearest_color(color_hex, simple_colors)
         color_mood = COLOR_MOOD_MAP.get(nearest_color, "Unknown")
@@ -292,27 +297,31 @@ def main():
             </div>
             """, unsafe_allow_html=True)
 
-        # 2. Text Analysis
+        # 2. Text Analysis (TextBlob Only)
         if journal_text:
-            sentiment = models["sentiment_analyzer"](journal_text)[0]
-            mental_health = models["text_analyzer"](journal_text)[0]
+            text_blob = TextBlob(journal_text)
+            sentiment_polarity = text_blob.sentiment.polarity
+            sentiment_subjectivity = text_blob.sentiment.subjectivity
+
+            sentiment_label = "Neutral"
+            if sentiment_polarity > 0.1:
+                sentiment_label = "Positive"
+            elif sentiment_polarity < -0.1:
+                sentiment_label = "Negative"
+
+            # No more Hugging Face emotion analysis!
             st.markdown(f"""
             <div>
-            📝 <strong style="font-size:large">Journal Sentiment: </strong>{sentiment['label']} ({sentiment['score']:.2f})<br>
+            📝 <strong style="font-size:large">Journal Sentiment: </strong>{sentiment_label} (Polarity: {sentiment_polarity:.2f}, Subjectivity: {sentiment_subjectivity:.2f})<br>
             </div>
             """, unsafe_allow_html=True)
-            st.markdown(f"""
-            <div>
-            🧠 <strong style="font-size:large">Mental Health Indicators: </strong>{mental_health['label']} ({mental_health['score']:.2f})<br><br>
-            </div>
-            """, unsafe_allow_html=True)
-            
+
         # 3. Voice Analysis
         if wav_audio_data is not None:
             with open("temp_audio.wav", "wb") as f:
                 f.write(wav_audio_data)
             voice_analysis = analyze_voice("temp_audio.wav")
-            
+
             if isinstance(voice_analysis, dict):
                 results.append(f"🎤 **Voice Analysis**:")
                 results.append(f"- Average pitch: {voice_analysis['mean_pitch_hz']} Hz")
@@ -348,7 +357,6 @@ def main():
             {interpretation}<br>
             </div>
             """, unsafe_allow_html=True)
-
 
             # Show all results
             st.markdown("\n\n".join(results))
