@@ -8,7 +8,7 @@ import nltk
 
 # Configure page
 st.set_page_config(
-    page_title="Mental State Detector",
+    page_title="Emotional State Detection Platform",
     page_icon="🧠",
     layout="wide"
 )
@@ -148,7 +148,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    st.title("Multi-Modal Emotional Wellbeing Analysis Suite 🧠")
+    st.title("Emotional State Detection Platform 🧠")
 
     # Privacy notice
     st.markdown("""
