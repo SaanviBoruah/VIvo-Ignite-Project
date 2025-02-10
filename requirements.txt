@@ -3,5 +3,5 @@ numpy
 librosa
 transformers
 streamlit-audiorec
-tensorflow
-tf-keras
+textblob
+nltk
