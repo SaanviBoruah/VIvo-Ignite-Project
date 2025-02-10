@@ -256,110 +256,110 @@ def main():
 
     # Submit button
     if button2.button("**Analyze Mental State**", type="primary", disabled = not valid):  # disabled = not valid,
-        st.subheader("Emotion Analysis Results")
-        # Disclaimer
-        st.markdown("""
-        <div style="background:#EAEAED; padding:10px; border-radius:0px 0px 10px 10px; margin-bottom:20px">
-        <strong style="color:#ff4c4b">Note:</strong> This is not a medical diagnosis. Consult a professional for medical advice.
-        </div>
-        """, unsafe_allow_html=True)
-        results = []
-
-        # 1. Color Analysis
-        color_hex = color.lstrip("#").lower()
-        simple_colors = {
-            "ff0000": "red",  # Red
-            "0000ff": "blue",  # Blue
-            "00ff00": "green",  # Green
-            "ffff00": "yellow",  # Yellow
-            "ffa500": "orange",  # Orange
-            "800080": "purple",  # Purple
-            "ffc0cb": "pink",  # Pink
-            "a52a2a": "brown",  # Brown
-            "000000": "black",  # Black
-            "ffffff": "white",  # White
-            "808080": "gray",  # Gray
-            "008080": "teal",  # Teal
-            "ff00ff": "magenta",  # Magenta
-            "e6e6fa": "lavender",  # Lavender
-            "ffd700": "gold",  # Gold
-            "c0c0c0": "silver",  # Silver
-            "40e0d0": "turquoise",  # Turquoise
-            "800000": "maroon",  # Maroon
-            "000080": "navy",  # Navy
-            "f5f5dc": "beige"  # Beige
-        }
-        nearest_color = find_nearest_color(color_hex, simple_colors)
-        color_mood = COLOR_MOOD_MAP.get(nearest_color, "Unknown")
-        st.markdown(f"""
-            <div>
-            🎨 <strong style="font-size:large">Color Mood: </strong>{color_mood}<br><br>
+        with st.container(border=True):
+            st.subheader("Emotion Analysis Results")
+            # Disclaimer
+            st.markdown("""
+            <div style="background:#EAEAED; padding:10px; border-radius:0px 0px 10px 10px; margin-bottom:20px">
+            <strong style="color:#ff4c4b">Note:</strong> This is not a medical diagnosis. Consult a professional for medical advice.
             </div>
             """, unsafe_allow_html=True)
-
-        # 2. Text Analysis (TextBlob Only)
-        if journal_text:
-            text_blob = TextBlob(journal_text)
-            sentiment_polarity = text_blob.sentiment.polarity
-            sentiment_subjectivity = text_blob.sentiment.subjectivity
-
-            sentiment_label = "Neutral"
-            if sentiment_polarity > 0.1:
-                sentiment_label = "Positive"
-            elif sentiment_polarity < -0.1:
-                sentiment_label = "Negative"
-
-            # No more Hugging Face emotion analysis!
+            results = []
+    
+            # 1. Color Analysis
+            color_hex = color.lstrip("#").lower()
+            simple_colors = {
+                "ff0000": "red",  # Red
+                "0000ff": "blue",  # Blue
+                "00ff00": "green",  # Green
+                "ffff00": "yellow",  # Yellow
+                "ffa500": "orange",  # Orange
+                "800080": "purple",  # Purple
+                "ffc0cb": "pink",  # Pink
+                "a52a2a": "brown",  # Brown
+                "000000": "black",  # Black
+                "ffffff": "white",  # White
+                "808080": "gray",  # Gray
+                "008080": "teal",  # Teal
+                "ff00ff": "magenta",  # Magenta
+                "e6e6fa": "lavender",  # Lavender
+                "ffd700": "gold",  # Gold
+                "c0c0c0": "silver",  # Silver
+                "40e0d0": "turquoise",  # Turquoise
+                "800000": "maroon",  # Maroon
+                "000080": "navy",  # Navy
+                "f5f5dc": "beige"  # Beige
+            }
+            nearest_color = find_nearest_color(color_hex, simple_colors)
+            color_mood = COLOR_MOOD_MAP.get(nearest_color, "Unknown")
             st.markdown(f"""
-            <div>
-            📝 <strong style="font-size:large">Journal Sentiment: </strong>{sentiment_label} (Polarity: {sentiment_polarity:.2f}, Subjectivity: {sentiment_subjectivity:.2f})<br>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # 3. Voice Analysis
-        if wav_audio_data is not None:
-            with open("temp_audio.wav", "wb") as f:
-                f.write(wav_audio_data)
-            voice_analysis = analyze_voice("temp_audio.wav")
-
-            if isinstance(voice_analysis, dict):
-                results.append(f"🎤 **Voice Analysis**:")
-                results.append(f"- Average pitch: {voice_analysis['mean_pitch_hz']} Hz")
-                results.append(f"- Pitch variability: {voice_analysis['pitch_variability']} Hz")
-                results.append(f"- Speech continuity: {voice_analysis['voiced_speech_percent']}% voiced")
-                results.append("--- Emotional indicators:")
-                for item in voice_analysis['interpretation']:
-                    results.append(f"  • {item.capitalize()}")
+                <div>
+                🎨 <strong style="font-size:large">Color Mood Results: </strong>{color_mood}<br><br>
+                </div>
+                """, unsafe_allow_html=True)
+    
+            # 2. Text Analysis (TextBlob Only)
+            if journal_text:
+                text_blob = TextBlob(journal_text)
+                sentiment_polarity = text_blob.sentiment.polarity
+                sentiment_subjectivity = text_blob.sentiment.subjectivity
+    
+                sentiment_label = "Neutral"
+                if sentiment_polarity > 0.1:
+                    sentiment_label = "Positive"
+                elif sentiment_polarity < -0.1:
+                    sentiment_label = "Negative"
+    
+                st.markdown(f"""
+                <div>
+                📝 <strong style="font-size:large">Text Sentiment Results: </strong>{sentiment_label} (Polarity: {sentiment_polarity:.2f}, Subjectivity: {sentiment_subjectivity:.2f})<br>
+                </div>
+                """, unsafe_allow_html=True)
+    
+            # 3. Voice Analysis
+            if wav_audio_data is not None:
+                with open("temp_audio.wav", "wb") as f:
+                    f.write(wav_audio_data)
+                voice_analysis = analyze_voice("temp_audio.wav")
+    
+                if isinstance(voice_analysis, dict):
+                    results.append(f"🎤 **Voice Analysis**:")
+                    results.append(f"- Average pitch: {voice_analysis['mean_pitch_hz']} Hz")
+                    results.append(f"- Pitch variability: {voice_analysis['pitch_variability']} Hz")
+                    results.append(f"- Speech continuity: {voice_analysis['voiced_speech_percent']}% voiced")
+                    results.append("--- Emotional indicators:")
+                    for item in voice_analysis['interpretation']:
+                        results.append(f"  • {item.capitalize()}")
+                else:
+                    results.append(f"🎤 **Voice Analysis Results:** {voice_analysis}")
+    
+            # 4. Psychometric Test Analysis
+            # Calculate score and interpretation
+            if selected_test == "DASS-21 (Depression, Anxiety, and Stress Scale)":
+                results = psychometric_tests.calculate_score(selected_test, responses)
+                st.write(f"😔 **Depression**: {results['Depression'][0]} ({results['Depression'][1]})")
+                st.write(f"😟 **Anxiety:** {results['Anxiety'][0]} ({results['Anxiety'][1]})")
+                st.write(f"😫 **Stress**: {results['Stress'][0]} ({results['Stress'][1]})")
+            elif selected_test == "PANAS (Positive and Negative Affect Schedule)":
+                results = psychometric_tests.calculate_score(selected_test, responses)
+                st.write(f"😄 **Positive Affect**: {results['Positive Affect'][0]} ({results['Positive Affect'][1]})")
+                st.write(f"☹️ **Negative Affect**: {results['Negative Affect'][0]} ({results['Negative Affect'][1]})")
             else:
-                results.append(f"🎤 **Voice Analysis**: {voice_analysis}")
-
-        # 4. Psychometric Test Analysis
-        # Calculate score and interpretation
-        if selected_test == "DASS-21 (Depression, Anxiety, and Stress Scale)":
-            results = psychometric_tests.calculate_score(selected_test, responses)
-            st.write(f"😔 **Depression**: {results['Depression'][0]} ({results['Depression'][1]})")
-            st.write(f"😟 **Anxiety:** {results['Anxiety'][0]} ({results['Anxiety'][1]})")
-            st.write(f"😫 **Stress**: {results['Stress'][0]} ({results['Stress'][1]})")
-        elif selected_test == "PANAS (Positive and Negative Affect Schedule)":
-            results = psychometric_tests.calculate_score(selected_test, responses)
-            st.write(f"😄 **Positive Affect**: {results['Positive Affect'][0]} ({results['Positive Affect'][1]})")
-            st.write(f"☹️ **Negative Affect**: {results['Negative Affect'][0]} ({results['Negative Affect'][1]})")
-        else:
-            interpretation = psychometric_tests.calculate_score(selected_test, responses)
-            st.markdown(f"""
-            <div>
-            😶 <strong style="font-size:large">Total Score:</strong><br>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown(f"""
-            <div>
-            {interpretation}<br>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Show all results
-            st.markdown("\n\n".join(results))
+                interpretation = psychometric_tests.calculate_score(selected_test, responses)
+                st.markdown(f"""
+                <div>
+                😶 <strong style="font-size:large">Emotion Assessment Results:</strong><br>
+                </div>
+                """, unsafe_allow_html=True)
+    
+                st.markdown(f"""
+                <div>
+                {interpretation}<br>
+                </div>
+                """, unsafe_allow_html=True)
+    
+                # Show all results
+                st.markdown("\n\n".join(results))
 
 
 if __name__ == "__main__":
