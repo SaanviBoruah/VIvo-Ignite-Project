@@ -5,4 +5,4 @@ transformers
 streamlit-audiorec
 textblob
 nltk
-cv2
+opencv-python
