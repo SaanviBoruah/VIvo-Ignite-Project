@@ -6,3 +6,6 @@ streamlit-audiorec
 textblob
 nltk
 opencv-python
+fer
+Pillow
+tensorflow
