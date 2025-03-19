@@ -6,7 +6,7 @@ from st_audiorec import st_audiorec
 from textblob import TextBlob
 import nltk
 from PIL import Image
-from face_detection import detect_faces
+import cv2
 
 # Configure page
 st.set_page_config(
@@ -221,14 +221,28 @@ def main():
         if picture:
             img = Image.open(picture)
             img_array = np.array(img)
-            face_results = detect_faces(img_array)
+            
+            # Convert to grayscale
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            
+            # Load face cascade
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            
+            # Detect faces
+            faces = face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(30, 30)
+            )
+            face_results = faces
 
         # Advanced Test Validation
         st.markdown("---")
         adv_col1, adv_col2 = st.columns(2)
         with adv_col1:
             if st.button("✅ Validate Advanced Test"):
-                if face_results and len(face_results) > 0:
+                if face_results is not None and len(face_results) > 0:
                     st.session_state.advanced_valid = True
                     st.success("Face detection validated!")
                 else:
@@ -240,7 +254,7 @@ def main():
                         type="primary"):
                 with st.container(border=True):
                     st.subheader("Advanced Analysis Report")
-                    if face_results:
+                    if face_results is not None and len(face_results) > 0:
                         st.write(f"**Detected Faces**: {len(face_results)}")
                         st.write("Face locations:")
                         for i, (x, y, w, h) in enumerate(face_results):
