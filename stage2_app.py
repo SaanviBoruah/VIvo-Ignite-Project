@@ -5,9 +5,8 @@ import psychometric_tests
 from st_audiorec import st_audiorec
 from textblob import TextBlob
 import nltk
-import cv2
-from fer import FER
 from PIL import Image
+from face_detection import detect_faces
 
 # Configure page
 st.set_page_config(
@@ -23,17 +22,6 @@ def download_nltk_resources():
 
 download_nltk_resources()
 
-# Initialize models (including FER)
-@st.cache_resource
-def load_models():
-    return {'emotion_detector': FER()}
-
-models = load_models()
-
-with open("style.css") as css:
-    st.markdown(f'<style>{css.read()}</style>', unsafe_allow_html=True)
-
-# Color-Mood Mapping
 COLOR_MOOD_MAP = {
     'red': 'Angry/Passionate',
     'blue': 'Calm/Peaceful',
@@ -121,7 +109,6 @@ def analyze_voice(audio_file):
     }
 
 def main():
-    # Page header and privacy notice
     st.markdown("""
     <div style="background:#EAEAED; padding:10px; text-align: center; border-radius:10px; border:2px solid #55E4C4; margin-bottom:20px">
     Built by <strong style="color:#ff4c4b">Saanvi Boruah</strong>. Project submission: <strong style="color:#ff4c4b">Multi-modal emotional wellbeing analysis suite</strong> for Vivo Ignite.
@@ -136,24 +123,19 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # Create tabs
     tab1, tab2 = st.tabs(["🧪 General Tests", "🔍 Advanced Tests"])
 
     with tab1:
-        st.subheader("Basic Emotional Assessment Modules")
+        st.subheader("Basic Emotional Assessment")
         
-        # Initialize session state for general tests
-        if 'general_valid' not in st.session_state:
-            st.session_state.general_valid = False
-
         # Color Mood Test
-        color = st.color_picker("🎨 Choose a color representing your mood", "#0000ff")
+        color = st.color_picker("🎨 Select a color representing your mood", "#0000ff")
 
         # Text Analysis
         journal_text = st.text_area("📝 Write about how you are feeling (min 50 characters)", height=100)
 
         # Psychometric Test
-        selected_test = st.selectbox("📊 Select a psychometric test:", 
+        selected_test = st.selectbox("📊 Choose a psychometric test:", 
                                    list(psychometric_tests.TESTS.keys()), 
                                    index=7)
         responses = []
@@ -190,36 +172,22 @@ def main():
 
         with gen_col2:
             if st.button("📄 Generate General Report", 
-                        disabled=not st.session_state.general_valid,
+                        disabled=not st.session_state.get('general_valid', False),
                         type="primary"):
                 with st.container(border=True):
-                    st.subheader("General Tests Analysis Report")
+                    st.subheader("General Analysis Report")
                     
                     # Color Analysis
                     color_hex = color.lstrip("#").lower()
                     simple_colors = {
-                        "ff0000": "red",  # Red
-                        "0000ff": "blue",  # Blue
-                        "00ff00": "green",  # Green
-                        "ffff00": "yellow",  # Yellow
-                        "ffa500": "orange",  # Orange
-                        "800080": "purple",  # Purple
-                        "ffc0cb": "pink",  # Pink
-                        "a52a2a": "brown",  # Brown
-                        "000000": "black",  # Black
-                        "ffffff": "white",  # White
-                        "808080": "gray",  # Gray
-                        "008080": "teal",  # Teal
-                        "ff00ff": "magenta",  # Magenta
-                        "e6e6fa": "lavender",  # Lavender
-                        "ffd700": "gold",  # Gold
-                        "c0c0c0": "silver",  # Silver
-                        "40e0d0": "turquoise",  # Turquoise
-                        "800000": "maroon",  # Maroon
-                        "000080": "navy",  # Navy
-                        "f5f5dc": "beige"  # Beige
+                        "ff0000": "red", "0000ff": "blue", "00ff00": "green",
+                        "ffff00": "yellow", "ffa500": "orange", "800080": "purple",
+                        "ffc0cb": "pink", "a52a2a": "brown", "000000": "black",
+                        "ffffff": "white", "808080": "gray", "008080": "teal",
+                        "ff00ff": "magenta", "e6e6fa": "lavender", "ffd700": "gold",
+                        "c0c0c0": "silver", "40e0d0": "turquoise", "800000": "maroon",
+                        "000080": "navy", "f5f5dc": "beige"
                     }
-
                     nearest_color = find_nearest_color(color_hex, simple_colors)
                     st.write(f"**Color Mood**: {COLOR_MOOD_MAP.get(nearest_color, 'Unknown')}")
 
@@ -239,48 +207,44 @@ def main():
                     voice_results = analyze_voice("temp_audio.wav")
                     st.write("**Voice Analysis**:")
                     st.write(f"Average pitch: {voice_results['mean_pitch_hz']} Hz")
+                    st.write("Interpretations:")
+                    for item in voice_results['interpretation']:
+                        st.write(f"- {item.capitalize()}")
 
     with tab2:
-        st.subheader("Advanced Facial Emotion Recognition")
+        st.subheader("Advanced Facial Analysis")
         
-        # Initialize session state for advanced test
-        if 'advanced_valid' not in st.session_state:
-            st.session_state.advanced_valid = False
-
-        picture = st.camera_input("😃 Take a picture for facial analysis")
+        # Face Detection
+        picture = st.camera_input("📸 Take a picture for face detection")
+        face_results = None
+        
         if picture:
             img = Image.open(picture)
             img_array = np.array(img)
-            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-            results = models['emotion_detector'].detect_emotions(img_array)
-            st.session_state.facial_emotions = results
+            face_results = detect_faces(img_array)
 
         # Advanced Test Validation
         st.markdown("---")
         adv_col1, adv_col2 = st.columns(2)
         with adv_col1:
             if st.button("✅ Validate Advanced Test"):
-                if 'facial_emotions' in st.session_state:
+                if face_results and len(face_results) > 0:
                     st.session_state.advanced_valid = True
-                    st.success("Facial analysis validated!")
+                    st.success("Face detection validated!")
                 else:
-                    st.error("Please capture a facial image first")
+                    st.error("No faces detected")
 
         with adv_col2:
             if st.button("📄 Generate Advanced Report", 
-                        disabled=not st.session_state.advanced_valid,
+                        disabled=not st.session_state.get('advanced_valid', False),
                         type="primary"):
                 with st.container(border=True):
-                    st.subheader("Advanced Test Analysis Report")
-                    facial_results = st.session_state.facial_emotions
-                    if facial_results:
-                        for i, face in enumerate(facial_results):
-                            emotions = face['emotions']
-                            dominant = max(emotions, key=emotions.get)
-                            st.write(f"""
-                            - **Face {i+1}**: {dominant.capitalize()} 
-                            (Confidence: {emotions[dominant]:.0%})
-                            """)
+                    st.subheader("Advanced Analysis Report")
+                    if face_results:
+                        st.write(f"**Detected Faces**: {len(face_results)}")
+                        st.write("Face locations:")
+                        for i, (x, y, w, h) in enumerate(face_results):
+                            st.write(f"- Face {i+1}: Position ({x}, {y}), Size ({w}x{h})")
                     else:
                         st.write("No faces detected in the image")
 
