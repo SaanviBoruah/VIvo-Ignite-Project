@@ -6,4 +6,4 @@ streamlit-audiorec
 textblob
 nltk
 Pillow
-mediapipe
+face-detection
