@@ -6,3 +6,4 @@ streamlit-audiorec
 textblob
 nltk
 Pillow
+torch
