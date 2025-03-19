@@ -5,6 +5,6 @@ transformers
 streamlit-audiorec
 textblob
 nltk
-opencv-python
 Pillow
-opencv-python-headless
+ultralytics
+onnxruntime
