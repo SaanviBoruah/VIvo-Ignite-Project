@@ -6,7 +6,7 @@ from st_audiorec import st_audiorec
 from textblob import TextBlob
 import nltk
 from PIL import Image
-import cv2
+from ultralytics import YOLO
 
 # Configure page
 st.set_page_config(
@@ -21,6 +21,13 @@ def download_nltk_resources():
     nltk.download('vader_lexicon', quiet=True)
 
 download_nltk_resources()
+
+# Load face detection model
+@st.cache_resource
+def load_face_model():
+    return YOLO('yolov8n-face.pt')  # Auto-downloads on first run
+
+face_model = load_face_model()
 
 COLOR_MOOD_MAP = {
     'red': 'Angry/Passionate',
@@ -107,6 +114,16 @@ def analyze_voice(audio_file):
         "voiced_speech_percent": round(voiced_frames_ratio, 1),
         "interpretation": interpretation
     }
+
+def detect_faces(image_array):
+    """Detect faces using YOLO without OpenCV"""
+    results = face_model.predict(image_array)
+    faces = []
+    for result in results:
+        for box in result.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            faces.append((x1, y1, x2-x1, y2-y1))
+    return faces
 
 def main():
     st.markdown("""
@@ -221,28 +238,14 @@ def main():
         if picture:
             img = Image.open(picture)
             img_array = np.array(img)
-            
-            # Convert to grayscale
-            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-            
-            # Load face cascade
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-            
-            # Detect faces
-            faces = face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=5,
-                minSize=(30, 30)
-            )
-            face_results = faces
+            face_results = detect_faces(img_array)
 
         # Advanced Test Validation
         st.markdown("---")
         adv_col1, adv_col2 = st.columns(2)
         with adv_col1:
             if st.button("✅ Validate Advanced Test"):
-                if face_results is not None and len(face_results) > 0:
+                if face_results and len(face_results) > 0:
                     st.session_state.advanced_valid = True
                     st.success("Face detection validated!")
                 else:
@@ -254,7 +257,7 @@ def main():
                         type="primary"):
                 with st.container(border=True):
                     st.subheader("Advanced Analysis Report")
-                    if face_results is not None and len(face_results) > 0:
+                    if face_results:
                         st.write(f"**Detected Faces**: {len(face_results)}")
                         st.write("Face locations:")
                         for i, (x, y, w, h) in enumerate(face_results):
