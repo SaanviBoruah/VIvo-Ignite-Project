@@ -6,5 +6,4 @@ streamlit-audiorec
 textblob
 nltk
 Pillow
-ultralytics
-onnxruntime
+mediapipe
