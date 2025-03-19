@@ -5,8 +5,8 @@ import psychometric_tests
 from st_audiorec import st_audiorec
 from textblob import TextBlob
 import nltk
-from PIL import Image
-from face_detection import detect_faces
+from PIL import Image, ImageDraw
+from transformers import pipeline
 
 # Configure page
 st.set_page_config(
@@ -21,6 +21,15 @@ def download_nltk_resources():
     nltk.download('vader_lexicon', quiet=True)
 
 download_nltk_resources()
+
+# Load models
+@st.cache_resource
+def load_models():
+    detector = pipeline("object-detection", model="facebook/detr-resnet-50")
+    classifier = pipeline("image-classification", model="Rajaram1996/FacialEmoRecog")
+    return detector, classifier
+
+face_detector, emotion_classifier = load_models()
 
 COLOR_MOOD_MAP = {
     'red': 'Angry/Passionate',
@@ -108,6 +117,35 @@ def analyze_voice(audio_file):
         "interpretation": interpretation
     }
 
+def detect_and_analyze_faces(image):
+    results = face_detector(image)
+    draw = ImageDraw.Draw(image)
+    emotions = []
+    
+    for result in results:
+        if result['label'] == 'person' and result['score'] > 0.9:
+            box = result['box']
+            xmin, ymin, xmax, ymax = box.values()
+            
+            # Crop face region
+            face = image.crop((xmin, ymin, xmax, ymax))
+            
+            # Analyze emotion
+            emotion_result = emotion_classifier(face)
+            top_emotion = emotion_result[0]['label']
+            
+            # Draw bounding box and label
+            draw.rectangle([xmin, ymin, xmax, ymax], outline="red", width=2)
+            draw.text((xmin, ymin-20), top_emotion, fill="red")
+            
+            emotions.append({
+                "position": (xmin, ymin, xmax-xmin, ymax-ymin),
+                "emotion": top_emotion,
+                "confidence": emotion_result[0]['score']
+            })
+    
+    return image, emotions
+
 def main():
     st.markdown("""
     <div style="background:#EAEAED; padding:10px; text-align: center; border-radius:10px; border:2px solid #55E4C4; margin-bottom:20px">
@@ -128,13 +166,8 @@ def main():
     with tab1:
         st.subheader("Basic Emotional Assessment")
         
-        # Color Mood Test
         color = st.color_picker("🎨 Select a color representing your mood", "#0000ff")
-
-        # Text Analysis
         journal_text = st.text_area("📝 Write about how you are feeling (min 50 characters)", height=100)
-
-        # Psychometric Test
         selected_test = st.selectbox("📊 Choose a psychometric test:", 
                                    list(psychometric_tests.TESTS.keys()), 
                                    index=7)
@@ -149,12 +182,10 @@ def main():
                 )
                 responses.append(test_data["scoring"][test_data["options"].index(response)])
 
-        # Voice Analysis
         wav_audio_data = st_audiorec()
         if wav_audio_data is not None:
             st.audio(wav_audio_data, format='audio/wav')
 
-        # General Tests Validation
         st.markdown("---")
         gen_col1, gen_col2 = st.columns(2)
         with gen_col1:
@@ -176,8 +207,6 @@ def main():
                         type="primary"):
                 with st.container(border=True):
                     st.subheader("General Analysis Report")
-                    
-                    # Color Analysis
                     color_hex = color.lstrip("#").lower()
                     simple_colors = {
                         "ff0000": "red", "0000ff": "blue", "00ff00": "green",
@@ -191,17 +220,14 @@ def main():
                     nearest_color = find_nearest_color(color_hex, simple_colors)
                     st.write(f"**Color Mood**: {COLOR_MOOD_MAP.get(nearest_color, 'Unknown')}")
 
-                    # Text Analysis
                     analysis = TextBlob(journal_text)
                     polarity = analysis.sentiment.polarity
                     st.write(f"**Text Sentiment**: {'Positive' if polarity > 0 else 'Negative' if polarity < 0 else 'Neutral'}")
 
-                    # Psychometric Results
                     test_results = psychometric_tests.calculate_score(selected_test, responses)
                     st.write("**Psychometric Assessment**:")
                     st.write(test_results)
 
-                    # Voice Analysis
                     with open("temp_audio.wav", "wb") as f:
                         f.write(wav_audio_data)
                     voice_results = analyze_voice("temp_audio.wav")
@@ -212,42 +238,27 @@ def main():
                         st.write(f"- {item.capitalize()}")
 
     with tab2:
-        st.subheader("Advanced Facial Analysis")
-        
-        # File uploader for face detection
-        uploaded_file = st.file_uploader("📸 Upload a photo for face detection", 
+        st.subheader("Advanced Facial Emotion Analysis")
+        uploaded_file = st.file_uploader("📸 Upload a photo for analysis", 
                                        type=["jpg", "jpeg", "png"])
-        face_results = None
         
         if uploaded_file is not None:
-            img = Image.open(uploaded_file)
-            img_array = np.array(img)
-            face_results = detect_faces(img_array)
-
-        # Advanced Test Validation
-        st.markdown("---")
-        adv_col1, adv_col2 = st.columns(2)
-        with adv_col1:
-            if st.button("✅ Validate Advanced Test"):
-                if face_results and len(face_results) > 0:
-                    st.session_state.advanced_valid = True
-                    st.success("Face detection validated!")
-                else:
-                    st.error("No faces detected")
-
-        with adv_col2:
-            if st.button("📄 Generate Advanced Report", 
-                        disabled=not st.session_state.get('advanced_valid', False),
-                        type="primary"):
-                with st.container(border=True):
-                    st.subheader("Advanced Analysis Report")
-                    if face_results:
-                        st.write(f"**Detected Faces**: {len(face_results)}")
-                        st.write("Face locations:")
-                        for i, (x, y, w, h) in enumerate(face_results):
-                            st.write(f"- Face {i+1}: Position ({x}, {y}), Size ({w}x{h})")
-                    else:
-                        st.write("No faces detected in the image")
+            image = Image.open(uploaded_file).convert("RGB")
+            processed_image, face_results = detect_and_analyze_faces(image)
+            
+            st.image(processed_image, caption="Processed Image with Emotion Detection")
+            
+            if face_results:
+                st.write("**Detected Emotions**:")
+                for i, face in enumerate(face_results):
+                    st.write(f"""
+                    - Face {i+1}:
+                        - Position: {face['position']}
+                        - Emotion: {face['emotion']}
+                        - Confidence: {face['confidence']:.2%}
+                    """)
+            else:
+                st.warning("No faces detected in the image")
 
 if __name__ == "__main__":
     main()
