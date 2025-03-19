@@ -8,4 +8,3 @@ nltk
 opencv-python
 Pillow
 opencv-python-headless
-face-detection
