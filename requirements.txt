@@ -6,6 +6,6 @@ streamlit-audiorec
 textblob
 nltk
 opencv-python
-fer
 Pillow
-tensorflow
+opencv-python-headless
+face-detection
