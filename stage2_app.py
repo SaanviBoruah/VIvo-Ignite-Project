@@ -6,7 +6,7 @@ from st_audiorec import st_audiorec
 from textblob import TextBlob
 import nltk
 from PIL import Image
-from ultralytics import YOLO
+import mediapipe as mp
 
 # Configure page
 st.set_page_config(
@@ -22,12 +22,15 @@ def download_nltk_resources():
 
 download_nltk_resources()
 
-# Load face detection model
+# Initialize MediaPipe Face Detection
 @st.cache_resource
-def load_face_model():
-    return YOLO('yolov8n-face.pt')  # Auto-downloads on first run
+def load_face_detector():
+    return mp.solutions.face_detection.FaceDetection(
+        model_selection=0, 
+        min_detection_confidence=0.5
+    )
 
-face_model = load_face_model()
+face_detector = load_face_detector()
 
 COLOR_MOOD_MAP = {
     'red': 'Angry/Passionate',
@@ -116,13 +119,18 @@ def analyze_voice(audio_file):
     }
 
 def detect_faces(image_array):
-    """Detect faces using YOLO without OpenCV"""
-    results = face_model.predict(image_array)
+    """Detect faces using MediaPipe"""
+    results = face_detector.process(image_array)
     faces = []
-    for result in results:
-        for box in result.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-            faces.append((x1, y1, x2-x1, y2-y1))
+    if results.detections:
+        for detection in results.detections:
+            bbox = detection.location_data.relative_bounding_box
+            h, w, _ = image_array.shape
+            x = int(bbox.xmin * w)
+            y = int(bbox.ymin * h)
+            width = int(bbox.width * w)
+            height = int(bbox.height * h)
+            faces.append((x, y, width, height))
     return faces
 
 def main():
