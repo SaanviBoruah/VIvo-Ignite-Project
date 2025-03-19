@@ -6,7 +6,7 @@ from st_audiorec import st_audiorec
 from textblob import TextBlob
 import nltk
 from PIL import Image
-import mediapipe as mp
+from face_detection import detect_faces
 
 # Configure page
 st.set_page_config(
@@ -21,16 +21,6 @@ def download_nltk_resources():
     nltk.download('vader_lexicon', quiet=True)
 
 download_nltk_resources()
-
-# Initialize MediaPipe Face Detection
-@st.cache_resource
-def load_face_detector():
-    return mp.solutions.face_detection.FaceDetection(
-        model_selection=0, 
-        min_detection_confidence=0.5
-    )
-
-face_detector = load_face_detector()
 
 COLOR_MOOD_MAP = {
     'red': 'Angry/Passionate',
@@ -57,7 +47,7 @@ COLOR_MOOD_MAP = {
 
 def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4)
 
 def find_nearest_color(selected_hex, simple_colors):
     selected_rgb = hex_to_rgb(selected_hex)
@@ -117,21 +107,6 @@ def analyze_voice(audio_file):
         "voiced_speech_percent": round(voiced_frames_ratio, 1),
         "interpretation": interpretation
     }
-
-def detect_faces(image_array):
-    """Detect faces using MediaPipe"""
-    results = face_detector.process(image_array)
-    faces = []
-    if results.detections:
-        for detection in results.detections:
-            bbox = detection.location_data.relative_bounding_box
-            h, w, _ = image_array.shape
-            x = int(bbox.xmin * w)
-            y = int(bbox.ymin * h)
-            width = int(bbox.width * w)
-            height = int(bbox.height * h)
-            faces.append((x, y, width, height))
-    return faces
 
 def main():
     st.markdown("""
@@ -239,12 +214,13 @@ def main():
     with tab2:
         st.subheader("Advanced Facial Analysis")
         
-        # Face Detection
-        picture = st.camera_input("📸 Take a picture for face detection")
+        # File uploader for face detection
+        uploaded_file = st.file_uploader("📸 Upload a photo for face detection", 
+                                       type=["jpg", "jpeg", "png"])
         face_results = None
         
-        if picture:
-            img = Image.open(picture)
+        if uploaded_file is not None:
+            img = Image.open(uploaded_file)
             img_array = np.array(img)
             face_results = detect_faces(img_array)
 
