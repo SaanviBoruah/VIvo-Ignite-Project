@@ -157,6 +157,19 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
+    st.markdown(
+                """
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="https://stage2-vivo-ignite-project-by-saanvi-boruah.streamlit.app/" target="_blank">
+                        <button style="background-color:#4CAF50; color:white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                            Talk to the Chatbot for Emotional Support
+                        </button>
+                    </a>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
     # Section 1: Color Picker
     st.subheader("Color Mood Test")
     st.markdown("""
