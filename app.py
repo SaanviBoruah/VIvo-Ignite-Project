@@ -161,7 +161,7 @@ def main():
                 """
                 <div style="text-align: center; margin-top: 20px;">
                     <a href="https://stage2-vivo-ignite-project-by-saanvi-boruah.streamlit.app/" target="_blank">
-                        <button style="background-color:#ff4c4b; color:white; padding: 10px 20px; border: none; border-radius: 16px; cursor: pointer;">
+                        <button style="background-color:#ff4c4b; color:white; padding: 10px 20px; border: none; border-radius: 16px; cursor: pointer; font-size: large">
                             Talk to the Chatbot for Emotional Support
                         </button>
                     </a>
