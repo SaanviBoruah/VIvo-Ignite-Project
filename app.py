@@ -165,7 +165,7 @@ def main():
                             Talk to the Chatbot for Emotional Support
                         </button>
                     </a>
-                </div>
+                </div><br>
                 """,
                 unsafe_allow_html=True,
             )
